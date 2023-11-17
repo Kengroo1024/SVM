@@ -7,17 +7,32 @@
 
 import pandas as pd
 import os
+from sklearn.utils import Bunch
 from sklearn.decomposition import PCA
-
-plastic = list()
-notplastic = list()
+from numpy import ones, zeros, concatenate, array
 
 
-for path, folders, files in os.walk(os.path.join("data_csv", "塑料")):
-    for file in files:
-        plastic.append(pd.read_csv(os.path.join(path, file),
-                       header=None, usecols=[0, 1]).values)
-for path, folders, files in os.walk(os.path.join("data_csv", "非塑料")):
-    for file in files:
-        notplastic.append(pd.read_csv(os.path.join(
-            path, file), header=None, usecols=[0, 1]).values)
+def get_data():
+    plastic = pd.DataFrame()
+    notplastic = pd.DataFrame()
+
+    for path, folders, files in os.walk(os.path.join("data_csv", "塑料")):
+        for file in files:
+            temp = pd.read_csv(os.path.join(path, file),
+                               header=None, usecols=[0, 1], index_col=0)
+            plastic = pd.concat([plastic, temp], axis=1)
+
+    for path, folders, files in os.walk(os.path.join("data_csv", "非塑料")):
+        for file in files:
+            temp = pd.read_csv(os.path.join(path, file),
+                               header=None, usecols=[0, 1], index_col=0)
+            notplastic = pd.concat([notplastic, temp], axis=1)
+
+    spectrum = Bunch()
+    spectrum["data"] = pd.concat((plastic, notplastic), axis=1).values.T
+    spectrum["target"] = concatenate((ones(plastic.shape[1]),
+                                      zeros(notplastic.shape[1])))
+    spectrum["feature_names"] = plastic.index.values
+    spectrum["target_names"] = array(['plastic', 'notplastic'], dtype='<U10')
+
+    return spectrum
