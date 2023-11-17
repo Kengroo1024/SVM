@@ -5,11 +5,13 @@
 加载数据并且使用PCA降维
 """
 
+from pdb import run
 import pandas as pd
 import os
 from sklearn.utils import Bunch
 from sklearn.decomposition import PCA
 from numpy import ones, zeros, concatenate, array
+from sklearn.model_selection import train_test_split
 
 
 def get_data():
@@ -36,3 +38,16 @@ def get_data():
     spectrum["target_names"] = array(['plastic', 'notplastic'], dtype='<U10')
 
     return spectrum
+
+
+if __name__ == '__main__':
+    spectrum = get_data()
+    data = pd.DataFrame(spectrum["data"], columns=spectrum["feature_names"])
+    data["output"] = spectrum['target']
+
+    pca = PCA(15)
+    output = pd.DataFrame(pca.fit_transform(
+        data.iloc[:, 0:-1]), index=data.index)
+    output['output'] = data['output']
+
+    output.to_csv('pcaed.csv')
