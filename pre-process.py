@@ -11,7 +11,6 @@ import os
 from sklearn.utils import Bunch
 from sklearn.decomposition import PCA
 from numpy import ones, zeros, concatenate, array
-from sklearn.model_selection import train_test_split
 
 
 def get_data():
