@@ -1,11 +1,10 @@
 #!usr/bin/env python
-# -*-coding: UTF-8 -*-
+# -*- coding: UTF-8 -*-
 
 """
 加载数据并且使用PCA降维
 """
 
-from pdb import run
 import pandas as pd
 import os
 from sklearn.utils import Bunch

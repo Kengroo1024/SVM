@@ -1,5 +1,5 @@
 #!usr/bin/env python
-# -*-coding: UTF-8 -*-
+# -*- coding: UTF-8 -*-
 
 from pandas import read_csv, DataFrame
 from sklearn import svm
@@ -14,11 +14,12 @@ def get_model(train: DataFrame):
     return clf.fit(feature, target)
 
 
-data = read_csv("pcaed.csv", index_col=0)
-train, test = train_test_split(data, random_state=1092)
+if __name__ == '__main__':
+    data = read_csv("pcaed.csv", index_col=0)
+    train, test = train_test_split(data, random_state=1092)
 
-clf = get_model(train)
+    clf = get_model(train)
 
-a = clf.predict(test.iloc[:, 0:-1])
-print(logical_xor(a, test["output"].values))
-print((1-logical_xor(a, test["output"].values).sum()/a.shape[0])*100)
+    a = clf.predict(test.iloc[:, 0:-1])
+    print(logical_xor(a, test["output"].values))
+    print((1-logical_xor(a, test["output"].values).sum()/a.shape[0])*100)
