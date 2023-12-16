@@ -2,14 +2,14 @@
 # -*- coding: UTF-8 -*-
 
 """
-加载数据并且使用PCA降维
+加载数据，滑动平均，PCA降维
 """
 
 import pandas as pd
 import os
 from sklearn.utils import Bunch
 from sklearn.decomposition import PCA
-from numpy import ones, zeros, concatenate, array
+from numpy import ones, zeros, concatenate, array, convolve
 
 
 def get_data():
@@ -38,8 +38,17 @@ def get_data():
     return spectrum
 
 
-if __name__ == '__main__':
-    spectrum = get_data()
+def slideAvg(spectrum: Bunch, width: int = 5) -> None:
+    kernel = ones((width,))/width
+    avg = list()
+    for data in spectrum["data"]:
+        avg.append(convolve(data, kernel, "same"))
+    avg = array(avg)
+    spectrum["data"] = avg
+    return None
+
+
+def PCADR(spectrum: Bunch) -> None:
     data = pd.DataFrame(spectrum["data"], columns=spectrum["feature_names"])
     data["output"] = spectrum['target']
 
@@ -47,5 +56,12 @@ if __name__ == '__main__':
     output = pd.DataFrame(pca.fit_transform(
         data.iloc[:, 0:-1]), index=data.index)
     output['output'] = data['output']
-
     output.to_csv('pcaed.csv')
+
+    return None
+
+
+if __name__ == '__main__':
+    spectrum = get_data()
+    slideAvg(spectrum)
+    PCADR(spectrum)

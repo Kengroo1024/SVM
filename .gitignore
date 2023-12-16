@@ -3,3 +3,5 @@
 /孑遗/
 test.*
 *.csv
+*.pickle
+/bestModel
