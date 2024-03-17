@@ -1,35 +1,69 @@
 #!usr/bin/env python
 # -*- coding: UTF-8 -*-
-from typing import Self
+
+import time
+import RPi.GPIO as GPIO
+import json
 
 
-class motor():
+class Motor():
     '''用于操作电机的类
     '''
 
-    def __init__(self, path: str) -> None:
-        pass
+    def __init__(self, pulPlus: int, pulMinus: int, dirPlus: int, dirMinus: int) -> None:
+        self.pulPlus = pulPlus
+        self.pulMinus = pulMinus
+        self.dirPlus = dirPlus
+        self.dirMinus = dirMinus
 
-    def upwards(self, d: float) -> Self:
-        return self
+        # GPIO相关设定
+        GPIO.setmode(GPIO.BCM)
+        for pin in [pulPlus, pulMinus, dirPlus, dirMinus]:
+            GPIO.setup(pin, GPIO.OUT)
 
-    def downwards(self, d: float) -> Self:
-        return self
+        return
 
-    def onwards(self, d: float) -> Self:
-        return self
+    def set_output(self, p1: bool | int, p2: bool | int, p3: bool | int, p4: bool | int) -> None:
+        '''将PUL+,PUL-,DIR+,DIR-的输出按顺序指定为参数
+        '''
+        GPIO.output(self.pulPlus, p1)
+        GPIO.output(self.pulMinus, p2)
+        GPIO.output(self.dirPlus, p3)
+        GPIO.output(self.dirMinus, p4)
+        return
 
-    def backwards(self, d: float) -> Self:
-        return self
+    def up_left_wards(self, t: float, period: float) -> None:
+        steps = int(t/period)
+        period /= 4
+        for i in range(steps):
+            self.set_output(1, 0, 0, 1)
+            time.sleep(period)
+            self.set_output(0, 1, 0, 1)
+            time.sleep(period)
+            self.set_output(0, 1, 1, 0)
+            time.sleep(period)
+            self.set_output(1, 0, 1, 0)
+            time.sleep(period)
+        self.reset()
+        return
 
-    def leftwards(self, d: float) -> Self:
-        return self
+    def down_right_wards(self, t: float, period: float) -> None:
+        steps = int(t/period)
+        period /= 4
+        for i in range(steps):
+            self.set_output(1, 0, 1, 0)
+            time.sleep(period)
+            self.set_output(0, 1, 1, 0)
+            time.sleep(period)
+            self.set_output(0, 1, 0, 1)
+            time.sleep(period)
+            self.set_output(1, 0, 0, 1)
+            time.sleep(period)
+        self.reset()
+        return
 
-    def rightwards(self, d: float) -> Self:
-        return self
-
-    def reset(self) -> Self:
-        return self
-
-    def clean(self) -> None:
-        pass
+    def reset(self) -> None:
+        '''Reset the output of the motor to none
+        '''
+        self.set_output(False, False, False, False)
+        return

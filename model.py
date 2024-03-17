@@ -31,15 +31,23 @@ def save_model(**kwargs) -> None:
     return None
 
 
+def load_model(path: str):
+    with open(path, "rb") as f:
+        data = pickle.load(f)
+    return data
+
+
 if __name__ == '__main__':
     data = read_csv("pcaed.csv", index_col=0)
     train, test = train_test_split(data, random_state=89756)
 
-    # clf = SVM_model(train)
+    clf = SVM_model(train)
 
-    clf = MLP_model(train)
+    # clf = MLP_model(train)
 
-    save_model(MLP=clf)
+    save_model(SVM=clf)
+
+    # clf = load_model("bestModel/MLP.pickle")
 
     a = clf.predict(test.iloc[:, 0:-1])
     print(logical_xor(a, test["output"].values))

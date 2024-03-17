@@ -12,17 +12,17 @@ from sklearn.decomposition import PCA
 from numpy import ones, zeros, concatenate, array, convolve
 
 
-def get_data():
+def get_train_data(trainSetPath: str):
     plastic = pd.DataFrame()
     notplastic = pd.DataFrame()
 
-    for path, folders, files in os.walk(os.path.join("data_csv", "塑料")):
+    for path, folders, files in os.walk(os.path.join(trainSetPath, "塑料")):
         for file in files:
             temp = pd.read_csv(os.path.join(path, file),
                                header=None, usecols=[0, 1], index_col=0)
             plastic = pd.concat([plastic, temp], axis=1)
 
-    for path, folders, files in os.walk(os.path.join("data_csv", "非塑料")):
+    for path, folders, files in os.walk(os.path.join(trainSetPath, "非塑料")):
         for file in files:
             temp = pd.read_csv(os.path.join(path, file),
                                header=None, usecols=[0, 1], index_col=0)
@@ -62,6 +62,6 @@ def PCADR(spectrum: Bunch) -> None:
 
 
 if __name__ == '__main__':
-    spectrum = get_data()
+    spectrum = get_train_data("data_csv")
     slideAvg(spectrum)
     PCADR(spectrum)
