@@ -40,13 +40,9 @@ def get_train_data(train_set_path: str) -> Bunch:
     return spectrum
 
 
-def getData(data_path: str) -> Bunch:
-    df = pd.DataFrame()
-    for root, subdirs, files in os.walk(data_path):
-        for file in files:
-            temp = pd.read_csv(os.path.join(root, file),
-                               header=None, usecols=[0, 1], index_col=0)
-            df = pd.concat([df, temp], axis=1)
+def getData(file_path: str) -> Bunch:
+    df = pd.read_csv(file_path,
+                     header=None, usecols=[0, 1], index_col=0)
 
     spectrum = Bunch()
     spectrum["data"] = df.values.T
@@ -67,12 +63,11 @@ def slideAvg(spectrum: Bunch, width: int = 5) -> None:
 
 def PCADR(spectrum: Bunch, labeled: bool, save: bool) -> PCA:
     data = pd.DataFrame(spectrum["data"], columns=spectrum["feature_names"])
-
     pca = PCA(15)
-    output = pd.DataFrame(pca.fit_transform(
-        data.iloc[:, 0:-1]), index=data.index)
+    newdata = pca.fit_transform(data.iloc[:, 0:-1])
 
     if labeled:
+        output = pd.DataFrame(newdata, index=data.index)
         data["output"] = spectrum['target']
         output['output'] = data['output']
 

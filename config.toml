@@ -1,0 +1,28 @@
+autoshutdown = true
+method = 'mlp'
+
+[path]
+new_file_dir = 'test'
+log = 'log'
+
+[motor.vertical]
+period = 0.0004
+track_length = 35
+lps = 1
+
+[motor.vertical.port]
+pulPlus = 1
+pulMinus = 2
+dirPlus = 3
+dirMinus = 4
+
+[motor.horizontal]
+period = 0.0004
+track_length = 10
+lps = 1
+
+[motor.horizontal.port]
+pulPlus = 1
+pulMinus = 2
+dirPlus = 3
+dirMinus = 4

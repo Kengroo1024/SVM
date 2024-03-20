@@ -1,16 +1,17 @@
 #!usr/bin/env python
 # -*- coding: UTF-8 -*-
+import tomllib
 import json
 import time
-import pickle
 import queue
 import os
+import sys
 import logging
 from datetime import date
 
 # import RPi.GPIO as GPIO
 from model import *
-# from motor import *
+from motor import *
 from formatting import *
 from preprocess import *
 
@@ -25,76 +26,127 @@ def endCleanup(func):
     def wapper(*args, **kwargs):
         try:
             func(*args, **kwargs)
+        except ValueError or KeyError or TypeError:
+            logging.error("配置文件不合法，程序已退出")
+        except KeyboardInterrupt:
+            logging.info("已通过键盘退出程序")
+        except FileNotFoundError:
+            logging.error("没有找到依赖文件，程序已退出")
+        except SystemExit:
+            logging.info("已自动关闭清理程序")
         finally:
-            log_name = os.path.join("log", f"{date.today()}.log")
-            log_format = "%(asctime)s [%(levelname)s]: %(message)s"
-            date_format = "%Y/%m/%d %H:%M:%S"
-
-            if not os.path.exists("log"):
-                os.makedirs("log")
-
-            logging.basicConfig(filename=log_name, filemode="a", level=logging.DEBUG,
-                                format=log_format, datefmt=date_format, encoding="utf-8")
-
-            # GPIO.cleanup()
-            logging.info(f"程序已停止，GPIO已重置输入状态")
+            try:
+                global vertical_motor, horizontal_motor
+                location = {
+                    "vertical": vertical_motor.location,
+                    "horizontal": horizontal_motor.location
+                }
+                with open("location.json", "w") as f:
+                    json.dump(location, f)
+            finally:
+                log_name = os.path.join("log", f"{date.today()}.log")
+                log_format = "%(asctime)s [%(levelname)s]: %(message)s"
+                date_format = "%Y/%m/%d %H:%M:%S"
+                if not os.path.exists("log"):
+                    os.makedirs("log")
+                logging.basicConfig(filename=log_name, filemode="a", level=logging.DEBUG,
+                                    format=log_format, datefmt=date_format, encoding="utf-8")
+                # GPIO.cleanup()
+                logging.info(f"GPIO已重置输入状态")
         return
     return wapper
 
 
 @endCleanup
-def main(dir_path: str):
+def main():
+    with open("config.toml", "rb") as cf:
+        config = tomllib.load(cf)
     # 设置日志
-    log_name = os.path.join("log", f"{date.today()}.log")
+    log_name = os.path.join(config['path']['log'], f"{date.today()}.log")
     log_format = "%(asctime)s [%(levelname)s]: %(message)s"
     date_format = "%Y/%m/%d %H:%M:%S"
 
-    if not os.path.exists("log"):
-        os.makedirs("log")
+    if not os.path.exists(config['path']['log']):
+        os.makedirs(config['path']['log'])
 
     logging.basicConfig(filename=log_name, filemode="a", level=logging.DEBUG,
                         format=log_format, datefmt=date_format, encoding="utf-8")
-    logging.debug("程序已经开始运行")
-
     # 加载模型
-    try:
-        pca = load_model("PCA.pickle")
-        svm_model = load_model("SVM.pickle")
-        mlp_model = load_model("MLP.pickle")
-    except:
-        logging.error("模型文件缺失，程序已自动退出，请联系工作人员修理")
-        raise FileNotFoundError
 
+    logging.debug("程序已经开始运行")
     # 创建队列
     q = queue.Queue(maxsize=5)
-
+    # 获取模型文件
+    pca = load_model("PCA.pickle")
+    if config["method"] == "svm":
+        svm_model = load_model("SVM.pickle")
+    elif config["method"] == "mlp":
+        mlp_model = load_model("MLP.pickle")
+    else:
+        raise ValueError("配置文件不合法")
+    global vertical_motor, horizontal_motor
+    vertical_motor = Motor(config["motor"]["vertical"]["port"],
+                           towards="vertical", lps=config["motor"]["vertical"]["lps"])
+    horizontal_motor = Motor(config["motor"]["horizontal"]["port"],
+                             towards="horizontal", lps=config["motor"]["horizontal"]["lps"])
+    vertical_motor.auto_up_left(config["motor"]["vertical"]["period"])
+    horizontal_motor.auto_up_left(config["motor"]["horizontal"]["period"])
+    # 自动关机计数变量
+    count = 0
     while True:
         if not q.full():
-            # 按修改时间降序排序获得文件序列表
-            dirlist = os.listdir(dir_path)
+            # 按修改时间降序排序获得文件列表
+            dirlist = os.listdir(config['path']['new_file_dir'])
             if dirlist:
                 dirlist.sort(key=lambda mtime: os.path.getmtime(
                     mtime), reverse=True)
                 # 向队列中存放
-                q.put(getData(dirlist[-1]))
-                os.remove(dirlist.pop())
+                q.put(getData(os.path.join(
+                    config['path']['new_file_dir'], dirlist[-1])))
+                os.remove(os.path.join(
+                    config['path']['new_file_dir'], dirlist.pop()))
             else:
                 logging.debug("无待处理文件")
-                time.sleep(5)
         else:
             logging.warning("操作过快，队列已满")
 
         # 从队列中获取数据并识别
         if not q.empty():
+            count = 0
             data = q.get()
             slideAvg(data)
             output = pd.DataFrame(
                 pca.transform(data.iloc[:, 0:-1]), index=data.index)
-            svm_predict = svm_model.predict(output.iloc[:, 0:-1])
-            mlp_predict = mlp_model.predict(output.iloc[:, 0:-1])
+            if config["method"] == "svm":
+                predict = svm_model.predict(output.iloc[:, 0:-1])[0]
+            elif config["method"] == "mlp":
+                predict = mlp_model.predict(output.iloc[:, 0:-1])[0]
+
+            logging.debug(f"获取的预测值为{"塑料" if predict else "非塑料"}")
+
+            if predict:
+                vertical_motor.auto_down_right(
+                    period=config["motor"]["vertical"]["period"],
+                    track_length=config["motor"]["vertical"]["track_length"]
+                )
+                horizontal_motor.auto_down_right(
+                    period=config["motor"]["horizontal"]["period"],
+                    track_length=config["motor"]["horizontal"]["track_length"]
+                )
+                vertical_motor.auto_up_left(
+                    period=config["motor"]["vertical"]["period"]
+                )
+                horizontal_motor.auto_up_left(
+                    period=config["motor"]["horizontal"]["period"]
+                )
         else:
             logging.debug("队列为空")
+            time.sleep(5)
+            if config["autoshutdown"]:
+                count += 1
+                if count == 120:
+                    sys.exit(0)
 
 
 if __name__ == '__main__':
-    main("test")
+    main()
