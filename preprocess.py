@@ -11,20 +11,22 @@ from sklearn.utils import Bunch
 from sklearn.decomposition import PCA
 from numpy import ones, zeros, concatenate, array, convolve
 
+from model import save_model
 
-def get_train_data(trainSetPath: str):
+
+def get_train_data(train_set_path: str) -> Bunch:
     plastic = pd.DataFrame()
     notplastic = pd.DataFrame()
 
-    for path, folders, files in os.walk(os.path.join(trainSetPath, "塑料")):
+    for root, subdirs, files in os.walk(os.path.join(train_set_path, "塑料")):
         for file in files:
-            temp = pd.read_csv(os.path.join(path, file),
+            temp = pd.read_csv(os.path.join(root, file),
                                header=None, usecols=[0, 1], index_col=0)
             plastic = pd.concat([plastic, temp], axis=1)
 
-    for path, folders, files in os.walk(os.path.join(trainSetPath, "非塑料")):
+    for root, subdirs, files in os.walk(os.path.join(train_set_path, "非塑料")):
         for file in files:
-            temp = pd.read_csv(os.path.join(path, file),
+            temp = pd.read_csv(os.path.join(root, file),
                                header=None, usecols=[0, 1], index_col=0)
             notplastic = pd.concat([notplastic, temp], axis=1)
 
@@ -38,8 +40,23 @@ def get_train_data(trainSetPath: str):
     return spectrum
 
 
+def getData(data_path: str) -> Bunch:
+    df = pd.DataFrame()
+    for root, subdirs, files in os.walk(data_path):
+        for file in files:
+            temp = pd.read_csv(os.path.join(root, file),
+                               header=None, usecols=[0, 1], index_col=0)
+            df = pd.concat([df, temp], axis=1)
+
+    spectrum = Bunch()
+    spectrum["data"] = df.values.T
+    spectrum["feature_names"] = df.index.values
+
+    return spectrum
+
+
 def slideAvg(spectrum: Bunch, width: int = 5) -> None:
-    kernel = ones((width,))/width
+    kernel = ones(width)/width
     avg = list()
     for data in spectrum["data"]:
         avg.append(convolve(data, kernel, "same"))
@@ -48,20 +65,24 @@ def slideAvg(spectrum: Bunch, width: int = 5) -> None:
     return None
 
 
-def PCADR(spectrum: Bunch) -> None:
+def PCADR(spectrum: Bunch, labeled: bool, save: bool) -> PCA:
     data = pd.DataFrame(spectrum["data"], columns=spectrum["feature_names"])
-    data["output"] = spectrum['target']
 
     pca = PCA(15)
     output = pd.DataFrame(pca.fit_transform(
         data.iloc[:, 0:-1]), index=data.index)
-    output['output'] = data['output']
-    output.to_csv('pcaed.csv')
 
-    return None
+    if labeled:
+        data["output"] = spectrum['target']
+        output['output'] = data['output']
+
+    if save:
+        output.to_csv('pcaed.csv')
+
+    return pca
 
 
 if __name__ == '__main__':
     spectrum = get_train_data("data_csv")
     slideAvg(spectrum)
-    PCADR(spectrum)
+    save_model(PCA=PCADR(spectrum, labeled=True, save=True))

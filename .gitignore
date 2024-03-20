@@ -5,3 +5,7 @@ test.*
 *.csv
 *.pickle
 /bestModel
+/.venv/
+/__pycache__/
+/log/
+/test/

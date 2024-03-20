@@ -5,19 +5,18 @@ from pandas import read_csv, DataFrame
 from sklearn import svm
 from sklearn.neural_network import MLPClassifier
 from sklearn.model_selection import train_test_split
-from numpy import logical_xor, logical_not
+from numpy import logical_xor
 import pickle
-from typing import Any
 
 
-def SVM_model(train: DataFrame):
+def SVM_model(train: DataFrame) -> svm.SVC:
     feature = train.iloc[:, 0:-1].values
     target = train["output"].values
     clf = svm.SVC()
     return clf.fit(feature, target)
 
 
-def MLP_model(train: DataFrame):
+def MLP_model(train: DataFrame) -> MLPClassifier:
     feature = train.iloc[:, 0:-1].values
     target = train["output"].values
     clf = MLPClassifier()
