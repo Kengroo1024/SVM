@@ -9,9 +9,9 @@ import sys
 import logging
 from datetime import date
 
-# import RPi.GPIO as GPIO
+import RPi.GPIO as GPIO
 from model import *
-from motor import *
+import motor
 from formatting import *
 from preprocess import *
 
@@ -33,26 +33,25 @@ def endCleanup(func):
         except FileNotFoundError:
             logging.error("没有找到依赖文件，程序已退出")
         except SystemExit:
-            logging.info("已自动关闭清理程序")
+            logging.info("已自动退出清理程序")
         finally:
-            try:
-                global vertical_motor, horizontal_motor
-                location = {
-                    "vertical": vertical_motor.location,
-                    "horizontal": horizontal_motor.location
-                }
-                with open("location.json", "w") as f:
-                    json.dump(location, f)
-            finally:
-                log_name = os.path.join("log", f"{date.today()}.log")
-                log_format = "%(asctime)s [%(levelname)s]: %(message)s"
-                date_format = "%Y/%m/%d %H:%M:%S"
-                if not os.path.exists("log"):
-                    os.makedirs("log")
-                logging.basicConfig(filename=log_name, filemode="a", level=logging.DEBUG,
-                                    format=log_format, datefmt=date_format, encoding="utf-8")
-                # GPIO.cleanup()
-                logging.info(f"GPIO已重置输入状态")
+            location = {
+                "vertical": motor.vertical_motor._location,
+                "horizontal": motor.horizontal_motor._location
+            }
+
+            with open("location.json", "w") as f:
+                json.dump(location, f)
+
+            log_name = os.path.join("log", f"{date.today()}.log")
+            log_format = "%(asctime)s [%(levelname)s]: %(message)s"
+            date_format = "%Y/%m/%d %H:%M:%S"
+            if not os.path.exists("log"):
+                os.makedirs("log")
+            logging.basicConfig(filename=log_name, filemode="a", level=logging.DEBUG,
+                                format=log_format, datefmt=date_format, encoding="utf-8")
+            GPIO.cleanup()
+            logging.info("GPIO已重置输入状态")
         return
     return wapper
 
@@ -84,13 +83,10 @@ def main():
         mlp_model = load_model("MLP.pickle")
     else:
         raise ValueError("配置文件不合法")
-    global vertical_motor, horizontal_motor
-    vertical_motor = Motor(config["motor"]["vertical"]["port"],
-                           towards="vertical", lps=config["motor"]["vertical"]["lps"])
-    horizontal_motor = Motor(config["motor"]["horizontal"]["port"],
-                             towards="horizontal", lps=config["motor"]["horizontal"]["lps"])
-    vertical_motor.auto_up_left(config["motor"]["vertical"]["period"])
-    horizontal_motor.auto_up_left(config["motor"]["horizontal"]["period"])
+
+    motor.vertical_motor.auto_up_left(config["motor"]["vertical"]["period"])
+    motor.horizontal_motor.auto_up_left(
+        config["motor"]["horizontal"]["period"])
     # 自动关机计数变量
     count = 0
     while True:
@@ -122,21 +118,21 @@ def main():
             elif config["method"] == "mlp":
                 predict = mlp_model.predict(output.iloc[:, 0:-1])[0]
 
-            logging.debug(f"获取的预测值为{"塑料" if predict else "非塑料"}")
+            logging.debug(f"获取的预测值为{'塑料' if predict else '非塑料'}")
 
             if predict:
-                vertical_motor.auto_down_right(
+                motor.vertical_motor.auto_down_right(
                     period=config["motor"]["vertical"]["period"],
                     track_length=config["motor"]["vertical"]["track_length"]
                 )
-                horizontal_motor.auto_down_right(
+                motor.horizontal_motor.auto_down_right(
                     period=config["motor"]["horizontal"]["period"],
                     track_length=config["motor"]["horizontal"]["track_length"]
                 )
-                vertical_motor.auto_up_left(
+                motor.vertical_motor.auto_up_left(
                     period=config["motor"]["vertical"]["period"]
                 )
-                horizontal_motor.auto_up_left(
+                motor.horizontal_motor.auto_up_left(
                     period=config["motor"]["horizontal"]["period"]
                 )
         else:
