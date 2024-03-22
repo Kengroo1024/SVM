@@ -49,5 +49,5 @@ if __name__ == '__main__':
     # clf = load_model("bestModel/MLP.pickle")
 
     a = clf.predict(test.iloc[:, 0:-1])
-    print(logical_xor(a, test["output"].values))
+    # print(logical_xor(a, test["output"].values))
     print((1-logical_xor(a, test["output"].values).sum()/a.shape[0])*100)

@@ -1,20 +1,18 @@
 import multiprocessing
-import queue
 
 import bottle
-import requests
+import paste
 
-from main import main
-import motor
-
+# from main import main
 
 app = bottle.Bottle()
 
 
 @app.route("/upload", method="POST")
 def upload():
-    files = bottle.request.files
-    files.get("file").save(f"test/{files.get("file").filename}")
+    data = bottle.request.files.get("data")
+    data.save(f"test/{data.filename}")
+    return None
 
 
 app.run(port=7735, server="paste")
