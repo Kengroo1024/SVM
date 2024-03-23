@@ -15,10 +15,11 @@ def format(folder_path: str, save_path: str) -> None:
     os.chdir(folder_path)
 
     for root, subdirs, files in os.walk("."):
-        os.makedirs(os.path.join(cwd, save_path, root))
+        if not os.path.exists(os.path.join(cwd, save_path, root)):
+            os.makedirs(os.path.join(cwd, save_path, root))
         for file in files:
             strg = str()
-            with open(os.path.join(cwd, save_path, root, file), "r") as f:
+            with open(os.path.join(cwd, folder_path, root, file), "r") as f:
                 for k in f.readlines()[9:]:
                     strg = strg + re.sub(';', ',', k)
             path = os.path.join(
@@ -31,4 +32,4 @@ def format(folder_path: str, save_path: str) -> None:
 
 
 if __name__ == '__main__':
-    format("raw_data", "data_cav")
+    format("raw_data", "data_json")

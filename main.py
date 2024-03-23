@@ -95,7 +95,8 @@ def main():
             dirlist = os.listdir(config['path']['new_file_dir'])
             if dirlist:
                 dirlist.sort(key=lambda mtime: os.path.getmtime(
-                    mtime), reverse=True)
+                    os.path.join(config['path']['new_file_dir'], mtime)),
+                    reverse=True)
                 # 向队列中存放
                 q.put(getData(os.path.join(
                     config['path']['new_file_dir'], dirlist[-1])))

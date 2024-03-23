@@ -41,8 +41,7 @@ def get_train_data(train_set_path: str) -> Bunch:
 
 
 def getData(file_path: str) -> Bunch:
-    df = pd.read_csv(file_path,
-                     header=None, usecols=[0, 1], index_col=0)
+    df = pd.read_csv(file_path, header=None, usecols=[0, 1], index_col=0)
 
     spectrum = Bunch()
     spectrum["data"] = df.values.T
