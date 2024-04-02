@@ -5,8 +5,10 @@
 加载数据，滑动平均，PCA降维
 """
 
-import pandas as pd
 import os
+import json
+
+import pandas as pd
 from sklearn.utils import Bunch
 from sklearn.decomposition import PCA
 from numpy import ones, zeros, concatenate, array, convolve
@@ -41,11 +43,12 @@ def get_train_data(train_set_path: str) -> Bunch:
 
 
 def getData(file_path: str) -> Bunch:
-    df = pd.read_csv(file_path, header=None, usecols=[0, 1], index_col=0)
-
+    with open(file_path) as f:
+        data = json.load(f)
+    df = pd.DataFrame(data)
     spectrum = Bunch()
-    spectrum["data"] = df.values.T
-    spectrum["feature_names"] = df.index.values
+    spectrum["data"] = df.values
+    spectrum["feature_names"] = df.columns.values
 
     return spectrum
 

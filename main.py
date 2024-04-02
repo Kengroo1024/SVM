@@ -11,7 +11,7 @@ from datetime import date
 
 import RPi.GPIO as GPIO
 from model import *
-import motor
+from motor import Motor
 from formatting import *
 from preprocess import *
 
@@ -35,21 +35,22 @@ def endCleanup(func):
         except SystemExit:
             logging.info("已自动退出清理程序")
         finally:
+            global vertical_motor, horizontal_motor
             location = {
-                "vertical": motor.vertical_motor._location,
-                "horizontal": motor.horizontal_motor._location
+                "vertical": vertical_motor._location,
+                "horizontal": horizontal_motor._location
             }
 
             with open("location.json", "w") as f:
                 json.dump(location, f)
 
-            log_name = os.path.join("log", f"{date.today()}.log")
-            log_format = "%(asctime)s [%(levelname)s]: %(message)s"
-            date_format = "%Y/%m/%d %H:%M:%S"
-            if not os.path.exists("log"):
-                os.makedirs("log")
-            logging.basicConfig(filename=log_name, filemode="a", level=logging.DEBUG,
-                                format=log_format, datefmt=date_format, encoding="utf-8")
+            # log_name = os.path.join("log", f"{date.today()}.log")
+            # log_format = "%(asctime)s [%(levelname)s]: %(message)s"
+            # date_format = "%Y/%m/%d %H:%M:%S"
+            # if not os.path.exists("log"):
+            #     os.makedirs("log")
+            # logging.basicConfig(filename=log_name, filemode="a", level=logging.DEBUG,
+            #                     format=log_format, datefmt=date_format, encoding="utf-8")
             GPIO.cleanup()
             logging.info("GPIO已重置输入状态")
         return
@@ -68,7 +69,17 @@ def main():
     if not os.path.exists(config['path']['log']):
         os.makedirs(config['path']['log'])
 
-    logging.basicConfig(filename=log_name, filemode="a", level=logging.DEBUG,
+    match config["log_level"]:
+        case "info":
+            level = logging.INFO
+        case "debug":
+            level = logging.DEBUG
+        case "error":
+            level = logging.ERROR
+        case _:
+            raise ValueError("配置文件不合法")
+
+    logging.basicConfig(filename=log_name, filemode="a", level=level,
                         format=log_format, datefmt=date_format, encoding="utf-8")
     # 加载模型
 
@@ -84,8 +95,19 @@ def main():
     else:
         raise ValueError("配置文件不合法")
 
-    motor.vertical_motor.auto_up_left(config["motor"]["vertical"]["period"])
-    motor.horizontal_motor.auto_up_left(
+    with open("config.toml", "rb") as f:
+        conf = tomllib.load(f)
+    ver_conf = conf["motor"]["vertical"]
+    hor_conf = conf["motor"]["horizontal"]
+
+    global vertical_motor, horizontal_motor
+    vertical_motor = Motor(
+        ver_conf["port"], towards="vertical", lps=ver_conf["lps"])
+    horizontal_motor = Motor(
+        hor_conf["port"], towards="horizontal", lps=hor_conf["lps"])
+
+    vertical_motor.auto_up_left(config["motor"]["vertical"]["period"])
+    horizontal_motor.auto_up_left(
         config["motor"]["horizontal"]["period"])
     # 自动关机计数变量
     count = 0
@@ -112,37 +134,38 @@ def main():
             count = 0
             data = q.get()
             slideAvg(data)
-            output = pd.DataFrame(
-                pca.transform(data.iloc[:, 0:-1]), index=data.index)
+            output = pca.transform(data["data"][:, 0:-1])
             if config["method"] == "svm":
-                predict = svm_model.predict(output.iloc[:, 0:-1])[0]
+                predict = svm_model.predict(output)[0]
             elif config["method"] == "mlp":
-                predict = mlp_model.predict(output.iloc[:, 0:-1])[0]
+                predict = mlp_model.predict(output)[0]
 
-            logging.debug(f"获取的预测值为{'塑料' if predict else '非塑料'}")
+            logging.info(f"获取的预测值为{'塑料' if predict else '非塑料'}")
 
             if predict:
-                motor.vertical_motor.auto_down_right(
+                vertical_motor.auto_down_right(
                     period=config["motor"]["vertical"]["period"],
                     track_length=config["motor"]["vertical"]["track_length"]
                 )
-                motor.horizontal_motor.auto_down_right(
+                horizontal_motor.auto_down_right(
                     period=config["motor"]["horizontal"]["period"],
                     track_length=config["motor"]["horizontal"]["track_length"]
                 )
-                motor.vertical_motor.auto_up_left(
+                vertical_motor.auto_up_left(
                     period=config["motor"]["vertical"]["period"]
                 )
-                motor.horizontal_motor.auto_up_left(
+                horizontal_motor.auto_up_left(
                     period=config["motor"]["horizontal"]["period"]
                 )
+            else:
+                time.sleep(5)
         else:
             logging.debug("队列为空")
             time.sleep(5)
             if config["autoshutdown"]:
                 count += 1
                 if count == 120:
-                    sys.exit(0)
+                    sys.exit()
 
 
 if __name__ == '__main__':

@@ -1,20 +1,24 @@
 autoshutdown = true
 method = 'mlp'
+log_level = 'info'
 
 [path]
 new_file_dir = 'test'
 log = 'log'
 
 [motor.vertical]
+# 周期数量级不能大于10^-4，不能小于10^-8
 period = 0.0004
-track_length = 35
-lps = 1
+track_length = 0.4
+#lps:length per step
+#track length=period*lps*step，step程序会自动计算
+lps = 0.0001
 
 [motor.vertical.port]
-pulPlus = 1
-pulMinus = 2
-dirPlus = 3
-dirMinus = 4
+pulPlus = 17
+pulMinus = 27
+dirPlus = 22
+dirMinus = 10
 
 [motor.horizontal]
 period = 0.0004
@@ -22,7 +26,7 @@ track_length = 10
 lps = 1
 
 [motor.horizontal.port]
-pulPlus = 1
-pulMinus = 2
-dirPlus = 3
+pulPlus = 25
+pulMinus = 8
+dirPlus = 7
 dirMinus = 4

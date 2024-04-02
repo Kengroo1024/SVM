@@ -19,9 +19,4 @@ def upload():
     return None
 
 
-@app.route("/")
-def hello():
-    return "hello"
-
-
 app.run(port=7735, server="paste")

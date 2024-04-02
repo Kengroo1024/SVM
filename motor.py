@@ -3,7 +3,6 @@
 
 import time
 import json
-import tomllib
 from typing import Literal
 
 import RPi.GPIO as GPIO
@@ -44,6 +43,7 @@ class Motor:
 
     def _up_left_wards(self, period: float) -> None:
         period /= 4
+        # CW/CWW信号，就是两组相位差90度的正弦波数字信号
         self._set_output(1, 0, 0, 1)
         time.sleep(period)
         self._set_output(0, 1, 0, 1)
@@ -57,6 +57,7 @@ class Motor:
 
     def _down_right_wards(self, period: float) -> None:
         period /= 4
+        # CW/CWW信号，就是两组相位差90度的正弦波数字信号
         self._set_output(1, 0, 1, 0)
         time.sleep(period)
         self._set_output(0, 1, 1, 0)
@@ -103,17 +104,6 @@ class Motor:
         """
         self._location = 0
 
-
-# 跨域电机变量
-with open("config.toml", "rb") as f:
-    conf = tomllib.load(f)
-ver_conf = conf["motor"]["vertical"]
-hor_conf = conf["motor"]["horizontal"]
-
-vertical_motor = Motor(
-    ver_conf["port"], towards="vertical", lps=ver_conf["lps"])
-horizontal_motor = Motor(
-    hor_conf["port"], towards="horizontal", lps=hor_conf["lps"])
 
 if __name__ == '__main__':
     GPIO.cleanup()
